@@ -1,0 +1,124 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recon-stream"
+version = "0.1.0"
+description = "High-volume bank reconciliation engine with PostgreSQL-native fuzzy matching"
+requires-python = ">=3.12"
+dependencies = [
+    "django~=5.2",
+    "django-ninja~=1.5",
+    "pydantic~=2.10",
+    "celery~=5.4",
+    "redis~=5.2",
+    "psycopg[binary]~=3.2",
+    "structlog~=24.4",
+    "gunicorn~=23.0",
+    "django-environ~=0.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest~=8.3",
+    "pytest-django~=4.9",
+    "factory-boy~=3.3",
+    "hypothesis~=6.115",
+    "freezegun~=1.4",
+    "ruff~=0.8",
+    "mypy~=1.13",
+    "django-stubs~=5.1",
+    "celery-stubs~=0.1",
+    "pre-commit~=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------- Ruff ----------
+[tool.ruff]
+src = ["src"]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",    # line length handled by formatter
+    "RUF012",  # mutable class attrs — false positive on Django model Meta / migrations
+    "RUF003",  # ambiguous unicode — intentional in comments
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "core", "reconciliation"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/scripts/*" = ["T201"]  # print() is intentional in CLI scripts
+
+# ---------- mypy ----------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["mypy_django_plugin.main"]
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "factory.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "environ.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "redis.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "structlog.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "freezegun.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "hypothesis.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "reconciliation.tests.*",
+    "core.migrations.*",
+    "reconciliation.migrations.*",
+    "scripts.*",
+]
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+# ---------- pytest ----------
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
