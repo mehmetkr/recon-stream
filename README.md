@@ -79,7 +79,7 @@ Both passes use `SELECT ... FOR UPDATE (SKIP LOCKED)` to prevent double-matching
 | `POST` | `/api/recon/reconcile/{job_id}/` | Trigger async matching (202) |
 | `GET`  | `/api/recon/results/{job_id}/` | Paginated match results |
 | `GET`  | `/api/recon/stats/{job_id}/` | Aggregated job statistics |
-| `GET`  | `/healthz/` | Health check (DB + Redis) |
+| `GET`  | `/health/` | Health check (DB + Redis) |
 
 ## Development
 

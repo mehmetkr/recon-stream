@@ -136,7 +136,7 @@ class ReconciliationMatcher:
         unmatched_bank_txs = BankTransaction.objects.filter(job=self.job).unmatched()
 
         count = 0
-        for bank_tx in unmatched_bank_txs.iterator():
+        for bank_tx in unmatched_bank_txs:
             candidates = (
                 GLEntry.objects.filter(job=self.job)
                 .unmatched()
