@@ -45,6 +45,8 @@ class ReconciliationMatcher:
 
         duration_ms = int((time.monotonic() - start) * 1000)
 
+        total_bank = BankTransaction.objects.filter(job=self.job).count()
+        total_gl = GLEntry.objects.filter(job=self.job).count()
         unmatched_bank = (
             BankTransaction.objects.filter(job=self.job).unmatched().count()
         )
@@ -53,6 +55,8 @@ class ReconciliationMatcher:
         )
 
         stats = {
+            "total_bank_transactions": total_bank,
+            "total_gl_entries": total_gl,
             "exact_matches": exact_count,
             "fuzzy_matches": fuzzy_count,
             "unmatched_bank_transactions": unmatched_bank,
@@ -132,7 +136,7 @@ class ReconciliationMatcher:
         unmatched_bank_txs = BankTransaction.objects.filter(job=self.job).unmatched()
 
         count = 0
-        for bank_tx in unmatched_bank_txs:
+        for bank_tx in unmatched_bank_txs.iterator():
             candidates = (
                 GLEntry.objects.filter(job=self.job)
                 .unmatched()
