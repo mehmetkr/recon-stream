@@ -1,0 +1,57 @@
+%% ReconStream — System Architecture
+%%
+%% Render with: https://mermaid.live or any Mermaid-compatible viewer.
+
+flowchart TB
+    subgraph Client
+        CLI[curl / Swagger UI]
+    end
+
+    subgraph Docker Compose
+        subgraph web ["web (Django + Ninja)"]
+            API["/api/recon/*"]
+            Health["/healthz/"]
+            Middleware["RequestId · Idempotency"]
+        end
+
+        subgraph worker ["worker (Celery)"]
+            Task["run_reconciliation"]
+            Matcher["ReconciliationMatcher"]
+        end
+
+        subgraph db ["db (PostgreSQL 15)"]
+            Models["ReconciliationJob\nBankTransaction\nGLEntry\nMatchResult"]
+            PgTrgm["pg_trgm\n(trigram similarity)"]
+        end
+
+        subgraph redis ["redis (Redis 7)"]
+            Broker["Celery Broker\n(queue)"]
+            Backend["Result Backend"]
+            IdemCache["Idempotency\nkey cache"]
+        end
+    end
+
+    CLI -->|HTTP| API
+    CLI -->|HTTP| Health
+    API --> Middleware
+    Middleware -->|CSV upload| Ingestion["services/ingestion.py\nbulk_create in batches"]
+    Middleware -->|POST /reconcile| Dispatch["transaction.on_commit\n→ task.delay()"]
+    Dispatch --> Broker
+    Broker --> Task
+    Task --> Matcher
+    Matcher -->|Pass 1: Exact SQL| Models
+    Matcher -->|Pass 2: Fuzzy pg_trgm| PgTrgm
+    Ingestion --> Models
+    API -->|GET /results, /stats| Models
+    Health --> db
+    Health --> redis
+    Middleware -.->|cache check| IdemCache
+    Task -.->|store result| Backend
+
+    classDef service fill:#e1f5fe,stroke:#0288d1
+    classDef data fill:#fff3e0,stroke:#f57c00
+    classDef infra fill:#f3e5f5,stroke:#7b1fa2
+
+    class API,Health,Middleware,Ingestion,Dispatch service
+    class Models,PgTrgm data
+    class Broker,Backend,IdemCache infra
