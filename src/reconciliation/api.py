@@ -3,6 +3,7 @@
 from typing import Any
 from uuid import UUID
 
+from django.db import transaction
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import File, Router
@@ -57,8 +58,6 @@ def reconcile(request: HttpRequest, job_id: UUID) -> tuple[int, JobResponse]:
     Uses transaction.on_commit to ensure the task is dispatched only
     after the current transaction commits.
     """
-    from django.db import transaction
-
     job = get_object_or_404(ReconciliationJob, id=job_id)
 
     if job.status == ReconciliationJob.Status.COMPLETED:
@@ -113,8 +112,26 @@ def get_results(request: HttpRequest, job_id: UUID, offset: int = 0, limit: int 
 
 @router.get("/stats/{job_id}/", response={200: StatsResponse, 404: dict})
 def get_stats(request: HttpRequest, job_id: UUID) -> tuple[int, StatsResponse]:
-    """Get aggregated statistics for a reconciliation job."""
+    """Get aggregated statistics for a reconciliation job.
+
+    For completed jobs, returns cached stats from the JSONField to avoid
+    expensive COUNT queries. Falls back to live queries otherwise.
+    """
     job = get_object_or_404(ReconciliationJob, id=job_id)
+
+    if job.status == ReconciliationJob.Status.COMPLETED and job.stats:
+        s = job.stats
+        return 200, StatsResponse(
+            job_id=job.id,
+            status=job.status,
+            total_bank_transactions=s.get("total_bank_transactions", 0),
+            total_gl_entries=s.get("total_gl_entries", 0),
+            exact_matches=s.get("exact_matches", 0),
+            fuzzy_matches=s.get("fuzzy_matches", 0),
+            unmatched_bank_transactions=s.get("unmatched_bank_transactions", 0),
+            unmatched_gl_entries=s.get("unmatched_gl_entries", 0),
+            duration_ms=s.get("duration_ms"),
+        )
 
     total_bank = job.bank_transactions.count()
     total_gl = job.gl_entries.count()
