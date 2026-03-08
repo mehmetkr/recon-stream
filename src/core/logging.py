@@ -6,12 +6,12 @@ JSON output in production, colored console output in development.
 from typing import Any
 
 import structlog
-from django.conf import settings
 
 
 def _build_processors_and_renderer(
+    *, debug: bool,
 ) -> tuple[list[structlog.types.Processor], structlog.types.Processor]:
-    """Build shared processor chain and renderer based on DEBUG setting."""
+    """Build shared processor chain and renderer based on debug flag."""
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.filter_by_level,
@@ -23,7 +23,7 @@ def _build_processors_and_renderer(
         structlog.processors.UnicodeDecoder(),
     ]
 
-    if settings.DEBUG:
+    if debug:
         renderer: structlog.types.Processor = structlog.dev.ConsoleRenderer()
     else:
         renderer = structlog.processors.JSONRenderer()
@@ -41,9 +41,9 @@ def _build_processors_and_renderer(
     return shared_processors, renderer
 
 
-def get_logging_config() -> dict[str, Any]:
+def get_logging_config(*, debug: bool) -> dict[str, Any]:
     """Return Django LOGGING dict configuration."""
-    shared_processors, renderer = _build_processors_and_renderer()
+    shared_processors, renderer = _build_processors_and_renderer(debug=debug)
 
     return {
         "version": 1,

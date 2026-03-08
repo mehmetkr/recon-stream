@@ -5,6 +5,8 @@ from pathlib import Path
 
 import environ
 
+from core.logging import get_logging_config
+
 # ---------- Paths ----------
 BASE_DIR = Path(__file__).resolve().parent.parent  # src/
 PROJECT_ROOT = BASE_DIR.parent  # recon-stream/
@@ -110,6 +112,4 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # ---------- Logging ----------
-from core.logging import get_logging_config  # noqa: E402
-
-LOGGING = get_logging_config()
+LOGGING = get_logging_config(debug=DEBUG)
